@@ -1,0 +1,104 @@
+Air bnb SQL code
+
+–We want to count the number of null values in columns we are particularly interested that could –help us find insights (accommodates, price, city, property type, etc) 
+
+select sum(case when city is null then 1 else 0 end) AS number_of_nulls
+     , count(city) AS count_not_nulls 
+  from airbnb;
+–distirict has  1,213,342 Null values
+
+–Looking to see why there are so many Nulls
+SELECT COUNT(district),district
+FROM airbnb
+GROUP BY district
+
+–Looks like the column is only related to New York property listings (the 5 burrows of NY)
+–bedrooms has  147,149 null, around 11% are null 85% are good to go, useable column 
+
+–Add a new column to create a standardized unit of measure for price
+
+ALTER TABLE airbnb
+ADD price_in_usd numeric
+
+–We want to standardize pricing of all listings so we turn them all into USD and create a column to store the new usd price
+
+INSERT INTO airbnb (city,price,price_in_usd)
+SELECT city,price,
+CASE
+		WHEN city = 'Sydney' THEN (price*0.667)
+		WHEN city = 'Rome' THEN (price*1.03)
+		WHEN city = 'Hong Kong' THEN (price*0.13)
+		WHEN city = 'Bangkok' THEN (price*0.028)
+		WHEN city = 'Cape Town' THEN (price*0.058)
+		WHEN city = 'Istanbul' THEN (price*0.053)
+		WHEN city = 'Rio de Janeiro' THEN (price*0.18)
+		WHEN city = 'Mexico City' THEN (price*0.051)
+		WHEN city = 'Paris' THEN (price*1.03)
+		WHEN city = ‘New York’ THEN (price*1)
+END
+FROM airbnb
+
+
+–Looking to find the average price per night in USD per city
+
+SELECT city,round(AVG(price_in_usd),2)
+FROM airbnb
+GROUP BY city
+ORDER BY round DESC
+Looking at the how many property types are in each city
+
+SELECT COUNT(property_type), property_type, city
+FROM airbnb
+GROUP BY property_type, city
+
+
+–We want to see how many property types are in New York and what their average listing price –is per property type in New York 
+
+SELECT COUNT(property_type), city, property_type, round(AVG(price),2)
+FROM airbnb
+WHERE city = 'New York'
+GROUP BY property_type, city
+HAVING round(AVG(price),2) >0 
+ORDER BY COUNT(property_type) DESC
+
+
+–What is the average list price for an apartment in New York based on how many it can –accommodate?
+
+SELECT accommodates, city, property_type,round(AVG(price),2)
+FROM airbnb
+WHERE city = 'New York' AND property_type = 'Entire apartment'
+GROUP BY accommodates, city,property_type 
+HAVING round(AVG(price),2) >0 
+ORDER BY accommodates DESC
+
+
+–Looking at avg list price per listings # of bedrooms in NY
+
+SELECT bedrooms, city, property_type,round(AVG(price),2)
+FROM airbnb
+WHERE city = 'New York' AND property_type = 'Entire apartment'
+GROUP BY bedrooms, city,property_type 
+HAVING round(AVG(price),2) >0 
+ORDER BY bedrooms DESC
+
+
+–We want to see the average list price by property type in each burrow of NY
+
+SELECT COUNT(district) AS num_listings_in_burrow,city, property_type,round(AVG(price),2),district
+FROM airbnb
+WHERE city = 'New York' 
+GROUP BY district, city,property_type 
+HAVING round(AVG(price),2) >0 
+ORDER BY district,num_listings_in_burrow DESC
+
+
+–To take the above we can then look even deeper than burrow, we can look into neighborhood –level
+
+SELECT COUNT(neighbourhood) AS num_listings_in_neighbourhood,
+city, property_type,round(AVG(price),2),neighbourhood
+FROM airbnb
+WHERE city = 'New York' 
+GROUP BY neighbourhood, city,property_type 
+HAVING round(AVG(price),2) >0 
+ORDER BY num_listings_in_neighbourhood DESC
+
